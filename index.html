@@ -246,7 +246,7 @@ button,input,select,textarea{font:inherit}button{cursor:pointer;-webkit-tap-high
   const today=isoToday();$('fName').value=target?.name||'';$('fLender').value=target?.lender||'';$('fUnit').value=target?.unit||(fromCalculator?val('cUnit'):'lakh');
   $('fStart').value=target?.startDate||today;$('fFirst').value=target?.firstDue||plusMonths(today,1);
   $('fAmount').value=target?exactInput(target.principalMMK,target.unit):'';
-  $('fYears').value=target?Math.floor(target.months/12):3;$('fMonths').value=target?target.months%12:0;$('fRatePeriod').value=target?.ratePeriod||'annual';$('fRate').value=target?(target.ratePeriod==='monthly'?(target.monthlyRate??target.annualRate/12):target.annualRate):15;$('fMethod').value=target?.method||'emi';$('fNote').value=target?.note||''; $('fBranch').value=target?.branch||profile?.branch||'FAMILY';
+  $('fYears').value=target?Math.floor(target.months/12):3;$('fMonths').value=target?target.months%12:0;$('fRatePeriod').value=target?.ratePeriod||'annual';$('fRate').value=target?(target.ratePeriod==='monthly'?(target.monthlyRate??target.annualRate/12):target.annualRate):15;$('fMethod').value=target?.method||'emi';$('fNote').value=target?.note||''; $('fBranch').value=target?.branch||(profile?.branch==='ALL'?(branches.find(b=>b.id==='FAMILY')?.id||branches[0]?.id||''):(profile?.branch||'FAMILY'));
   if(fromCalculator){const c=calcData();if(c){$('fName').value='New Loan';$('fAmount').value=exactInput(c.loanMMK,val('cUnit'));$('fYears').value=num('cYears');$('fMonths').value=num('cMonths');$('fRate').value=num('cRate');$('fRatePeriod').value='annual'}}
   updatePreview();openDialog('loanDialog');
  }
