@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#102a44">
 <meta name="description" content="Loan Keeper — Private Google Login, role and branch controlled loan tracker">
-<meta name="app-ui-version" content="4.1-persistent-session-loan-fees">
+<meta name="app-ui-version" content="4.3-compact-ui-name-only">
 <title>Loan Keeper | Family Secure</title>
 <style>
 :root{--bg:#f4f7fb;--ink:#14273c;--sub:#63758a;--navy:#102a44;--teal:#008c85;--tealbg:#e9faf6;--blue:#286cf1;--line:#e3eaf2;--white:#fff;--red:#c44146;--redbg:#fff1f1;--gold:#9d6519;--goldbg:#fff7e7;--shadow:0 9px 30px #152c4710}
@@ -43,30 +43,225 @@ button,input,select,textarea{font:inherit}button{cursor:pointer;-webkit-tap-high
 .feeGrid .field input,.feeGrid .field select{height:42px;font-size:13px}
 .feeMini{color:var(--sub);font-size:11px;line-height:1.6}
 @media(max-width:430px){.feeGrid{grid-template-columns:1fr}.feeGrid .field.full{grid-column:auto}}
+
+/* V4.2 — Header Login layout only (no auth, data, or permission logic changed). */
+.header{display:grid;grid-template-columns:minmax(190px,250px) minmax(0,1fr) 40px;column-gap:12px;align-items:center;margin-bottom:12px}
+.header>.brand{grid-column:1;grid-row:1;min-width:0}
+.header>.headerAccount{grid-column:2;grid-row:1;min-width:0;width:100%;border:1px solid #bfd6eb;background:#f2f8ff;border-radius:13px;padding:6px 10px}
+.header>#signedPanel{background:#edf9f5;border-color:#a8ded0}
+.header>#backupShortcut{grid-column:3;grid-row:1}
+.headerLoginMain{display:flex;gap:9px;align-items:center;justify-content:center;min-height:36px;min-width:0}
+.headerLoginTitle{white-space:nowrap;font-size:11px;font-weight:850;color:#2b516b}
+.header #googleSignInButton{min-height:36px;max-width:100%}
+.header #loginMessage{margin:2px 0 0;font-size:10px;line-height:1.4;text-align:center;overflow-wrap:anywhere}
+.headerSignedMain{display:flex;gap:8px;justify-content:space-between;align-items:center;flex-wrap:wrap}
+.headerSignedIdentity{min-width:0;overflow-wrap:anywhere}
+.headerSignedIdentity b{font-size:12px;line-height:1.35}
+.header #signedMeta{font-size:10px;line-height:1.35;margin:0}
+.headerActions{display:flex;gap:5px;align-items:center;flex-wrap:wrap}
+.headerActions .btn{min-height:31px;padding:5px 8px;font-size:10px;white-space:nowrap}
+.header #secureStatus{font-size:10px;line-height:1.3;margin:2px 0 0}
+@media(max-width:860px){
+ .header{grid-template-columns:minmax(0,1fr) 40px;row-gap:9px}
+ .header>.brand{grid-column:1;grid-row:1}
+ .header>#backupShortcut{grid-column:2;grid-row:1}
+ .header>.headerAccount{grid-column:1/-1;grid-row:2}
+}
+@media(max-width:390px){
+ .headerLoginMain{flex-wrap:wrap;gap:2px}
+ .headerLoginTitle{display:none}
+ .headerActions .btn{min-height:30px;padding:4px 6px}
+}
+
+/* V4.3 compact UI: layout density only. Server permissions, loans, payments and sessions unchanged. */
+:root{--shadow:0 3px 13px #152c470c}
+.app{width:min(1180px,100%);padding:9px 13px 42px}
+.header{grid-template-columns:minmax(170px,245px) minmax(0,1fr);gap:7px 10px;margin:0 0 7px;align-items:center}
+.header .brand{gap:8px}
+.logo{width:37px;height:37px;border-radius:11px;font-size:21px}
+.brandtitle{font-size:15px}
+.brandsub{font-size:9px;margin-top:1px}
+.header>.headerAccount{grid-column:2;grid-row:1;justify-self:stretch;padding:4px 8px;border-radius:10px}
+.header>#backupShortcut{display:none!important} /* redundant: main Backup tab remains */
+.headerLoginMain{min-height:29px;justify-content:flex-start;gap:9px}
+.headerLoginTitle{font-size:11px}
+.header #googleSignInButton{min-height:29px;display:flex;align-items:center}
+.header #loginMessage{font-size:10px;text-align:left;margin:1px 0 0}
+.headerSignedMain{gap:5px;flex-wrap:nowrap}
+.headerSignedIdentity{min-width:0;flex:1}
+.headerSignedIdentity b{display:block;font-size:12px;max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.header #signedMeta{font-size:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.headerActions{gap:4px;flex-wrap:nowrap}
+.headerActions .btn{min-height:34px;padding:5px 9px;font-size:11px;border-radius:9px}
+.header #secureStatus{font-size:10px;margin:0;line-height:1.2;overflow-wrap:anywhere}
+.nav{top:4px;gap:3px;padding:3px;border-radius:11px;margin:0 0 9px}
+.nav button{min-height:37px;font-size:11px;border-radius:8px;padding:3px 5px}
+.section{margin-top:10px}
+.sectionTitle{gap:8px;margin:0 0 7px}
+.sectionTitle h2{font-size:14px}
+.sectionTitle p{font-size:10px;line-height:1.35}
+.panel{padding:12px;border-radius:13px}
+.compactHero{display:flex;align-items:center;gap:11px;padding:11px 12px;border-radius:13px}
+.compactHero:after{display:none}
+.compactHero .heroHeading{flex:0 0 145px;min-width:0;z-index:1}
+.compactHero h1{font-size:15px;margin:0;letter-spacing:0;line-height:1.4}
+.compactHero .compactMetrics{flex:1;margin:0;min-width:0;grid-template-columns:repeat(4,minmax(0,1fr));gap:7px}
+.compactHero .metric{padding:8px 10px;border-radius:9px}
+.compactHero .metric small{font-size:10px;line-height:1.45;overflow-wrap:anywhere}
+.compactHero .metric strong{font-size:20px;line-height:1.3}
+.compactHero .metric strong span{font-size:10px}
+.btn{min-height:37px;padding:7px 11px;border-radius:9px;gap:5px;font-size:11px}
+.btn.tiny{min-height:34px;padding:5px 9px;font-size:11px}
+.btnRow{gap:6px}
+.btnRow>*{min-width:0}
+.loanList{gap:7px}
+.loanCard{padding:10px 12px;border-radius:12px}
+.loanTop{gap:6px}
+.loanTop strong{font-size:13px}
+.loanTop .lender{font-size:10px;margin-top:1px}
+.tag{padding:3px 7px;font-size:10px}
+.loanStats{gap:8px;margin-top:6px}
+.loanStats small{font-size:10px}
+.loanStats b{font-size:16px;line-height:1.4}
+.progress{height:5px;margin:7px 0 4px}
+.loanFooter{gap:7px;margin-top:4px}
+.loanFooter span{font-size:10px;line-height:1.5}
+.empty{padding:18px 10px}
+.emptyIcon{width:38px;height:38px;margin-bottom:7px}
+.fieldGrid{gap:8px 10px}
+.field label{font-size:11px;margin-bottom:3px;line-height:1.4}
+.field input,.field select,.field textarea{height:38px;min-width:0;padding:0 9px;border-radius:8px;font-size:13px;font-weight:650}
+.field textarea{height:auto;min-height:52px;padding:7px 9px;line-height:1.5}
+.field input[type=file]{height:auto;min-height:38px}
+.fieldDesc{margin-top:2px}
+.dateField{gap:4px}
+.datePickBtn{flex-basis:38px;height:38px;border-radius:8px;font-size:17px}
+.feesBlock{padding:9px;margin-top:0;border-radius:10px}
+.feeItem{padding:8px;border-radius:9px;margin:7px 0}
+.feeItemHeader{gap:6px;margin-bottom:6px}
+.feeGrid{gap:6px 8px}
+.feeGrid .field input,.feeGrid .field select{height:38px;font-size:12px}
+.feeMini{font-size:10px;line-height:1.45}
+.notice{padding:8px 10px;border-radius:9px;font-size:11px}
+.warnbox{padding:8px 10px;margin-top:8px;border-radius:9px;font-size:11px}
+.compactNote{margin:4px 0 0;font-size:10px;line-height:1.45}
+.subhead{margin:10px 0 6px;font-size:11px}
+.thinDivider{margin:10px 0}
+.calcLayout{gap:9px}
+.results{gap:6px}
+.result{padding:9px;border-radius:10px}
+.result strong{font-size:20px}
+.result h3{margin-bottom:6px}
+.result .stat{margin-top:6px;padding-top:6px}
+.mainTotal{padding:9px 11px;margin-top:8px;border-radius:10px}
+.mainTotal b{font-size:18px}
+.detailsPage .panel{margin-top:8px}
+.detailHero{padding:12px;border-radius:13px}
+.detailHero h2{font-size:17px}
+.detailHero p{margin-bottom:7px}
+.detailPairs{gap:7px}
+.detailPairs b{font-size:16px}
+.keyrows{gap:6px}
+.keyrow{gap:7px;padding-bottom:5px}
+.tableScroll{max-height:440px;border-radius:9px}
+.dataTable th,.dataTable td{padding:6px 8px}
+.paymentsList{gap:6px}
+.payCard{padding:8px 10px;border-radius:9px}
+.payCard .btn{min-height:34px}
+.dialog{width:min(650px,100%);padding:10px 12px calc(10px + env(safe-area-inset-bottom));border-radius:15px}
+.dialogTop{top:-10px;padding:7px 0;margin-bottom:9px}
+.dialogTop h2{font-size:15px}
+.dialogClose{min-width:36px;min-height:36px;border-radius:8px}
+@media(max-width:940px){
+ .compactHero{display:block}
+ .compactHero .heroHeading{margin-bottom:7px}
+ .compactHero .compactMetrics{grid-template-columns:repeat(4,minmax(0,1fr))}
+ .header{grid-template-columns:minmax(170px,235px) minmax(0,1fr)}
+}
+@media(max-width:720px){
+ .app{padding:8px 9px 30px}
+ .header{grid-template-columns:minmax(0,1fr);gap:5px;margin-bottom:6px}
+ .header>.brand{grid-column:1;grid-row:1}
+ .header>.headerAccount{grid-column:1;grid-row:2}
+ .headerLoginMain{justify-content:flex-start}
+ .headerActions .btn{min-height:36px}
+ .nav{top:3px;margin-bottom:8px}
+ .nav button{min-height:39px}
+ .compactHero{padding:10px;border-radius:11px}
+ .compactHero h1{font-size:14px}
+ .compactHero .compactMetrics{grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}
+ .compactHero .metric{padding:7px 9px}
+ .compactHero .metric strong{font-size:18px}
+ .panel{padding:10px}
+ .field input,.field select,.field textarea{height:41px;font-size:14px}
+ .field textarea{min-height:54px}
+ .datePickBtn{height:41px;flex-basis:41px}
+ .feeGrid .field input,.feeGrid .field select{height:41px}
+ .btn{min-height:40px}
+ .btn.tiny{min-height:38px}
+ .fieldGrid{gap:9px 7px}
+ .loanStats b{font-size:16px}
+ .dialog{max-height:96dvh}
+ .dialogTop{top:-10px}
+ .calcLayout{grid-template-columns:1fr}
+}
+@media(max-width:390px){
+ .headerLoginTitle{display:inline;font-size:10px}
+ .headerActions .btn{font-size:10px;padding:5px 6px}
+ .headerSignedMain{flex-wrap:wrap}
+ .headerSignedIdentity{flex-basis:100%}
+ .compactHero .metric small{font-size:10px}
+ .fieldGrid{grid-template-columns:repeat(2,minmax(0,1fr))}
+ .feeGrid{grid-template-columns:1fr}
+ .btnRow>*{min-width:0}
+}
+/* Use available desktop space for loan cards; keep phones single-column. */
+@media(min-width:721px){.loanList{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:390px){
+ .headerSignedMain{flex-wrap:nowrap}
+ .headerSignedIdentity{flex-basis:auto;flex:1;min-width:0}
+ .headerActions{flex-shrink:0}
+ .headerActions .btn{min-height:34px;padding:4px 5px;font-size:10px}
+}
+@media print{
+ .compactHero{background:none!important;color:#000;padding:0}
+ .compactHero .metric{border-color:#ddd;color:#000}
+ .header,#signinPanel,#signedPanel{display:none!important}
+}
 </style>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 </head>
 <body>
 <div class="app" id="app">
- <header class="header"><div class="brand"><div class="logo">₭</div><div><div class="brandtitle">Loan Keeper</div><div class="brandsub">Family Loans · Google Login · Payments</div></div></div><button class="miniIcon" id="backupShortcut" aria-label="Backup နဲ့ Restore" title="Backup / Restore">⇩</button></header>
+ <header class="header">
+   <div class="brand"><div class="logo">₭</div><div><div class="brandtitle">Loan Keeper</div><div class="brandsub">Family Loans · Google Login · Payments</div></div></div>
+   <!-- Authentication UI is in the header; existing IDs and secure session logic are unchanged. -->
+   <div id="signinPanel" class="headerAccount" aria-label="Google Login">
+     <div class="headerLoginMain"><span class="headerLoginTitle">🔐 Google Login</span><div id="googleSignInButton"></div></div>
+     <div id="loginMessage" class="compactNote" role="status">Login Setup မပြီးသေးပါ။</div>
+   </div>
+   <div id="signedPanel" class="headerAccount" style="display:none" aria-label="Signed-in Account">
+     <div class="headerSignedMain">
+       <div class="headerSignedIdentity"><b id="signedName">Account</b><div id="signedMeta" class="compactNote"></div></div>
+       <div class="headerActions"><button class="btn tiny" id="reloadCloud" title="Cloud Refresh">↻ Refresh</button><button class="btn tiny" id="showPermissions" title="Role &amp; Permission">Role</button><button class="btn tiny" id="logOutBtn">Logout</button></div>
+     </div>
+     <div class="compactNote" id="secureStatus">🔒 Private Google Sheet</div>
+   </div>
+   <button class="miniIcon" id="backupShortcut" aria-label="Backup နဲ့ Restore" title="Backup / Restore">⇩</button>
+ </header>
  <nav class="nav noPrint" aria-label="Pages"><button data-tab="home" class="active">▦ Loan စာရင်း</button><button data-tab="calculator">▤ Calculator</button><button data-tab="backup">⇩ Backup</button></nav>
  <main>
- <section class="page active" id="page-home"><div class="panel" id="signinPanel" style="margin:0 0 15px;border:1px solid #bfd6eb;background:#f2f8ff">
-  <div style="font-weight:850;font-size:16px">🔐 Google Mail အတည်ပြုပါ</div>
-  <p class="compactNote">USERS Tab ထဲမှာ အတည်ပြုထားတဲ့ Account ပဲ Loan မှတ်တမ်းကို ကြည့်/ပြင်နိုင်ပါတယ်။ Google Login ကနေ Mail ကို အတည်ပြုပြီး Server က Role / Branch / Permission ကို ထပ်စစ်ပါတယ်။</p>
-  <div id="googleSignInButton" style="margin-top:12px;min-height:42px"></div>
-  <div id="loginMessage" class="compactNote">Login Setup မပြီးသေးပါ။</div>
-</div>
-<div id="signedPanel" class="panel" style="display:none;margin:0 0 15px;background:#edf9f5;border:1px solid #a8ded0">
-  <div style="display:flex;justify-content:space-between;gap:6px;align-items:center"><div><b id="signedName">Account</b><div id="signedMeta" class="compactNote" style="margin-top:3px"></div></div><button class="btn tiny" id="logOutBtn">Logout</button></div>
-  <div class="btnRow" style="margin-top:10px"><button class="btn tiny" id="reloadCloud">↻ Cloud Refresh</button><button class="btn tiny" id="showPermissions">Role &amp; Permission</button></div>
-  <div class="compactNote" id="secureStatus">🔒 Private Google Sheet</div>
-</div>
-
-  <div class="hero"><div class="eyebrow">PRIVATE FAMILY LOAN KEEPER</div><h1>ချေးငွေအားလုံး တစ်နေရာတည်း</h1><p>ချေးထားတဲ့ငွေ၊ သွင်းပြီးငွေ၊ လစဉ် Due Date နဲ့ ကျန်အရစ်ကျတွေကို စီမံကြည့်ရှုပါ။</p><div class="topMetrics"><div class="metric"><small>Loan စုစုပေါင်း</small><strong id="hCount">0 <span>ခု</span></strong></div><div class="metric"><small>ကျန်သွင်းငွေစုစုပေါင်း</small><strong id="hRemain">0 <span>သိန်း</span></strong></div></div></div>
-  <div class="topMetrics"><div class="metric dark"><small>သွင်းပြီး စုစုပေါင်း</small><strong id="hPaid">0 <span>သိန်း</span></strong></div><div class="metric dark"><small>Due ကျော်နေသော ငွေ</small><strong id="hOverdue">0 <span>သိန်း</span></strong></div></div>
+ <section class="page active" id="page-home">
+  <div class="hero compactHero">
+   <div class="heroHeading"><h1>Loan အကျဉ်းချုပ်</h1></div>
+   <div class="topMetrics compactMetrics">
+    <div class="metric"><small>Loan စုစုပေါင်း</small><strong id="hCount">0 <span>ခု</span></strong></div>
+    <div class="metric"><small>ကျန်သွင်းငွေစုစုပေါင်း</small><strong id="hRemain">0 <span>သိန်း</span></strong></div>
+    <div class="metric"><small>သွင်းပြီး စုစုပေါင်း</small><strong id="hPaid">0 <span>သိန်း</span></strong></div>
+    <div class="metric"><small>Due ကျော်နေသောငွေ</small><strong id="hOverdue">0 <span>သိန်း</span></strong></div>
+   </div>
+  </div>
   <div class="section"><div class="sectionTitle"><div><h2>My Loans</h2><p>Loan တစ်ခုချင်းစီ၏ လက်ရှိအခြေအနေ</p></div><button class="btn primary tiny permissionHidden" id="addLoanBtn">＋ Loan ထည့်</button></div><div class="loanList" id="loanList"></div></div>
-  <div class="warnbox"><b>Data သိမ်းဆည်းမှု</b> — Private Google Sheet မှာ Data သိမ်းပြီးမှ Save Success ပြပါမယ်။ Google Login မလုပ်ရသေးရင် Calculator ပဲ အသုံးပြုနိုင်ပါတယ်။</div>
  </section>
  <section class="page" id="page-calculator">
   <div class="sectionTitle"><div><h2>Loan Calculator</h2><p>Flat Rate / Reducing Balance နှိုင်းယှဉ်ရန်</p></div></div>
@@ -224,7 +419,7 @@ button,input,select,textarea{font:inherit}button{cursor:pointer;-webkit-tap-high
    profile=result.profile;branches=result.branches||[];loans=result.loans;
    activeLoanId=activeLoanId&&loans.some(l=>l.id===activeLoanId)?activeLoanId:null;
    $('signinPanel').style.display='none';$('signedPanel').style.display='block';
-   $('signedName').textContent=profile.name+' · '+profile.email;
+   $('signedName').textContent=String(profile.name||'User').trim();
    $('signedMeta').textContent=`${profile.role} · ${profile.branch} · ${profile.level}`;
    permissionUI();
    status('✓ Cloud Loaded · '+new Date().toLocaleTimeString());
@@ -255,7 +450,7 @@ button,input,select,textarea{font:inherit}button{cursor:pointer;-webkit-tap-high
        await refreshCloud();
      }catch(e){clearSavedSession();$('loginMessage').textContent='Access denied: '+e.message}
    }});
-   google.accounts.id.renderButton($('googleSignInButton'),{theme:'outline',size:'large',type:'standard',text:'signin_with',width:280});
+   google.accounts.id.renderButton($('googleSignInButton'),{theme:'outline',size:'medium',type:'icon',shape:'circle'});
    $('loginMessage').textContent=sessionToken?'Saved session ပြန်ချိတ်ဆက်နေပါသည်…':'Account ရွေးပြီး Login ဝင်ပါ';
  }
  function logout(){
@@ -555,7 +750,7 @@ button,input,select,textarea{font:inherit}button{cursor:pointer;-webkit-tap-high
  $('fStart').addEventListener('change',()=>{if(!editingId){setDate('fFirst',plusMonths(val('fStart'),1));updatePreview()}});
  $('exportJSON').onclick=exportJson;$('exportCSV').onclick=exportCsv;$('restoreBtn').onclick=restore;
  $('reloadCloud').onclick=()=>void refreshCloud().catch(err=>{if(/session|token|login|inactive/i.test(String(err.message||''))){clearSavedSession();profile=null;loans=[];$('signinPanel').style.display='block';$('signedPanel').style.display='none';permissionUI();renderHome();status('Session expired · Login required')}else notifyError(err)});
- $('showPermissions').onclick=()=>{if(!profile)return;alert(`Google Mail: ${profile.email}\nRole: ${profile.role}\nBranch: ${profile.branch}\nLevel: ${profile.level}\nAllowed: ${profile.permissions.join(', ')}`)};
+ $('showPermissions').onclick=()=>{if(!profile)return;alert(`User: ${profile.name}\nRole: ${profile.role}\nBranch: ${profile.branch}\nLevel: ${profile.level}\nAllowed: ${profile.permissions.join(', ')}`)};
  $('logOutBtn').onclick=logout;
  ['fStart','fFirst','pDate'].forEach(bindDateInput);permissionUI();
  renderHome();renderCalc();initBridge();
