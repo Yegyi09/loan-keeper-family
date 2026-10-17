@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#102a44">
 <meta name="description" content="Loan Keeper — Private Google Login, role and branch controlled loan tracker">
-<meta name="app-ui-version" content="3.1-owner-export-dmy">
+<meta name="app-ui-version" content="4.1-persistent-session-loan-fees">
 <title>Loan Keeper | Family Secure</title>
 <style>
 :root{--bg:#f4f7fb;--ink:#14273c;--sub:#63758a;--navy:#102a44;--teal:#008c85;--tealbg:#e9faf6;--blue:#286cf1;--line:#e3eaf2;--white:#fff;--red:#c44146;--redbg:#fff1f1;--gold:#9d6519;--goldbg:#fff7e7;--shadow:0 9px 30px #152c4710}
@@ -32,6 +32,17 @@ button,input,select,textarea{font:inherit}button{cursor:pointer;-webkit-tap-high
 .datePickBtn:hover{border-color:#9ec7ec}
 /* Keep a real date control for native mobile calendar, but never show its locale-specific text. */
 .field .dateField input.nativeDatePicker{position:absolute;right:12px;top:50%;width:1px;height:1px;padding:0;border:0;opacity:0;pointer-events:none;z-index:-1}
+
+/* Loan fees editor — compact on mobile, read-only net breakdown in details. */
+.feesBlock{border:1px solid #dbe9ec;background:#f4fbfa;border-radius:14px;padding:12px;margin-top:3px}
+.feeItem{background:white;border:1px solid #d8e4ee;border-radius:12px;padding:11px;margin:10px 0}
+.feeItemHeader{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:9px}
+.feeItemTitle{font-size:11px;font-weight:800;color:#34556b}
+.feeGrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
+.feeGrid .field.full{grid-column:1/-1}
+.feeGrid .field input,.feeGrid .field select{height:42px;font-size:13px}
+.feeMini{color:var(--sub);font-size:11px;line-height:1.6}
+@media(max-width:430px){.feeGrid{grid-template-columns:1fr}.feeGrid .field.full{grid-column:auto}}
 </style>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 </head>
@@ -96,6 +107,9 @@ button,input,select,textarea{font:inherit}button{cursor:pointer;-webkit-tap-high
  <div class="field"><label for="fRatePeriod">အတိုးကာလ *</label><select id="fRatePeriod"><option value="annual">တစ်နှစ်စာ %</option><option value="monthly">တစ်လစာ %</option></select></div>
  <div class="field full"><label for="fMethod">အတိုးတွက်နည်း *</label><select id="fMethod"><option value="emi">Reducing EMI</option><option value="flat">Flat Rate</option><option value="equal">Reducing Equal Principal</option></select></div>
  <div class="field full"><label for="fBranch">Branch / အဖွဲ့</label><select id="fBranch"><option value="FAMILY">FAMILY</option></select></div>
+ <div class="field full"><label for="fLoanType">Loan Type (Optional)</label><input id="fLoanType" maxlength="60" list="loanKinds" placeholder="SME / Business / Housing / Other"><datalist id="loanKinds"><option value="SME"><option value="Business"><option value="Housing"><option value="Personal"><option value="Other"></datalist></div>
+ <div class="field full feesBlock"><div class="sectionTitle"><div><h2 style="font-size:14px">Loan Charges &amp; Fees</h2><p>Service / မီးအာမခံ / ရှေ့နေခ · Loan ထဲမှ ဖြတ် သို့မဟုတ် သီးခြားပေး</p></div><button type="button" class="btn soft tiny" id="addFeeBtn">＋ Fee ထည့်</button></div>
+ <div class="feeMini">Fees က အတိုးတွက်မည့် မူလ Principal / EMI ကို မပြောင်းပါ။ ရာခိုင်နှုန်း Fee က စာချုပ် Principal အပေါ်တွက်ပါတယ်။</div><div id="feeRows"></div><div id="feeSummary" class="notice" style="margin-top:8px">Fee မရှိသေးပါ။</div></div>
  <div class="field full"><label for="fNote">မှတ်ချက် (Optional)</label><textarea id="fNote" maxlength="700" placeholder="စာချုပ်နံပါတ်၊ အသေးစိတ်"></textarea></div></div>
  <p class="compactNote" style="margin:5px 0">Date format: DD/MM/YYYY (ဥပမာ 17/10/2026) · 📅 Calendar ဖြင့်လည်း ရွေးနိုင်ပါတယ်။</p>
  <div class="notice" id="loanPreview" style="margin:13px 0"></div><div class="btnRow"><button type="button" class="btn" data-close="loanDialog">မလုပ်တော့</button><button class="btn primary" type="submit">✓ Loan သိမ်းမယ်</button></div></form></div></div>
@@ -110,6 +124,12 @@ button,input,select,textarea{font:inherit}button{cursor:pointer;-webkit-tap-high
    googleClientId:'549775695586-aqqrk3ng6teojrvilamh8qdaffeea4kn.apps.googleusercontent.com',
    bridgeUrl:'https://script.google.com/macros/s/AKfycbwwjlFPsXl_USw1O6tOt4o9kRUCpHxJAM5C2pFH99zr1GbSOqq_b3uv3bQJC_INwjfJ/exec'
  };
+ // Store ONLY the opaque application session; never persist Google ID tokens.
+ const SESSION_STORAGE_KEY='LK_FAMILY_SESSION_V4';
+ let sessionToken='';
+ try{sessionToken=localStorage.getItem(SESSION_STORAGE_KEY)||''}catch{}
+ if(sessionToken&&!/^[0-9a-f]{64}$/.test(sessionToken))sessionToken='';
+ let sessionRestoreStarted=false;
  let profile=null,branches=[],idToken='',bridgeReady=false,bridgeFrame=null;
  let bridgeWindow=null,bridgeOrigin='';
  // Bind the bridge to a per-page cryptographically random channel.
@@ -150,7 +170,7 @@ button,input,select,textarea{font:inherit}button{cursor:pointer;-webkit-tap-high
    // event.source is NOT bridgeFrame.contentWindow (script.google.com wrapper).
    if(x.kind==='LK_READY'){
      bridgeWindow=event.source;bridgeOrigin=event.origin;bridgeReady=true;
-     status('✓ Secure Bridge Connected');return;
+     status('✓ Secure Bridge Connected');void restoreSavedSession();return;
    }
    if(!bridgeReady||event.source!==bridgeWindow||x.kind!=='LK_REPLY')return;
    const job=pending.get(x.id);if(!job)return;
@@ -159,13 +179,44 @@ button,input,select,textarea{font:inherit}button{cursor:pointer;-webkit-tap-high
    else job.reject(new Error(x.result?.error||'Cloud operation error'));
  });
  function bridgeRequest(action,payload={}){
-   if(!idToken) return Promise.reject(Error('Google Login required'));
+   const googleLogin=action==='LOGIN_SESSION';
+   if(googleLogin?!idToken:!sessionToken)return Promise.reject(Error('Login session required'));
    if(!bridgeReady)return Promise.reject(Error('Backend မချိတ်ရသေးပါ။ Bridge URL, Apps Script Access, GitHub Pages Origin စစ်ပါ။'));
+   const request={action,requestId:uid(),payload};
+   if(googleLogin)request.idToken=idToken;
+   else request.sessionToken=sessionToken;
    return new Promise((resolve,reject)=>{
       const id=uid();const timeout=setTimeout(()=>{pending.delete(id);reject(Error('Cloud response timed out'))},60000);
       pending.set(id,{resolve,reject,timeout});
-      bridgeWindow.postMessage({kind:'LK_RPC',channel:bridgeChannel,id,request:{idToken,action,requestId:uid(),payload}},bridgeOrigin);
+      bridgeWindow.postMessage({kind:'LK_RPC',channel:bridgeChannel,id,request},bridgeOrigin);
    });
+ }
+ function clearSavedSession(){
+   sessionToken='';idToken='';
+   try{localStorage.removeItem(SESSION_STORAGE_KEY)}catch{}
+ }
+ let sessionRetryCount=0;
+ async function restoreSavedSession(){
+   if(!sessionToken||sessionRestoreStarted)return;
+   sessionRestoreStarted=true;
+   status('Restoring your saved session…');
+   try{await refreshCloud();sessionRetryCount=0}
+   catch(err){
+     const message=String(err?.message||err);
+     if(!/session expired|session missing|session malformed|logged out|user inactive|not approved in USERS|role configuration invalid|Permission denied/i.test(message)){
+       // Network outage/temporary backend issue must never erase a valid session.
+       status('Cloud connection pending — saved session retained');
+       sessionRestoreStarted=false;
+       if(++sessionRetryCount<=8)setTimeout(()=>void restoreSavedSession(),15000);
+       return;
+     }
+     clearSavedSession();
+     profile=null;loans=[];activeLoanId=null;
+     $('signinPanel').style.display='block';$('signedPanel').style.display='none';
+     permissionUI();renderHome();renderCalc();
+     status('Session expired or revoked · Google Login required');
+     $('loginMessage').textContent='Session သက်တမ်းကုန်ခြင်း / Logout ဖြစ်ခြင်းကြောင့် Google Login ပြန်ဝင်ပါ';
+   }
  }
  async function refreshCloud(){
    const result=await bridgeRequest('LOAD');
@@ -194,15 +245,26 @@ button,input,select,textarea{font:inherit}button{cursor:pointer;-webkit-tap-high
    google.accounts.id.initialize({client_id:CONFIG.googleClientId,callback:async res=>{
      if(!res.credential){$('loginMessage').textContent='Google Login မအောင်မြင်ပါ';return}
      idToken=res.credential;$('loginMessage').textContent='Google Mail စစ်နေပါတယ်…';
-     try{await refreshCloud()}catch(e){idToken='';$('loginMessage').textContent='Access denied: '+e.message}
+     try{
+       const s=await bridgeRequest('LOGIN_SESSION');
+       if(!s||!/^[0-9a-f]{64}$/.test(s.sessionToken||''))throw Error('Server session invalid');
+       sessionToken=s.sessionToken;idToken='';
+       try{localStorage.setItem(SESSION_STORAGE_KEY,sessionToken)}catch{
+         $('loginMessage').textContent='Private browsing mode: Refresh လုပ်ရင် Login ပြန်ဝင်ရနိုင်ပါတယ်';
+       }
+       await refreshCloud();
+     }catch(e){clearSavedSession();$('loginMessage').textContent='Access denied: '+e.message}
    }});
    google.accounts.id.renderButton($('googleSignInButton'),{theme:'outline',size:'large',type:'standard',text:'signin_with',width:280});
-   $('loginMessage').textContent='Account ရွေးပြီး Login ဝင်ပါ';
+   $('loginMessage').textContent=sessionToken?'Saved session ပြန်ချိတ်ဆက်နေပါသည်…':'Account ရွေးပြီး Login ဝင်ပါ';
  }
- function logout(){idToken='';profile=null;loans=[];activeLoanId=null;
-   if(window.google?.accounts?.id)google.accounts.id.disableAutoSelect();
+ function logout(){
+   // Revoke the exact browser session on the server. Clear it locally immediately.
+   if(sessionToken&&bridgeReady)void bridgeRequest('LOGOUT_SESSION').catch(()=>{});
+   clearSavedSession();profile=null;loans=[];activeLoanId=null;
+   if(window.google?.accounts?.id)window.google.accounts.id.disableAutoSelect();
    $('signinPanel').style.display='block';$('signedPanel').style.display='none';switchTab('home');
-   status('Logged out');$('loginMessage').textContent='Google Login ကို ပြန်နှိပ်နိုင်ပါပြီ';permissionUI();renderCalc();
+   status('Logged out');$('loginMessage').textContent='Google Login ကို ပြန်နှိပ်နိုင်ပါပြီ';permissionUI();renderHome();renderCalc();
  }
  
  const $=id=>document.getElementById(id);
@@ -244,6 +306,69 @@ button,input,select,textarea{font:inherit}button{cursor:pointer;-webkit-tap-high
    });
  }
  const uid=()=> typeof crypto!=='undefined'&&crypto.randomUUID?crypto.randomUUID():`id-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+ // Optional non-interest loan charges: amounts are stored in MMK, not display units.
+ let feeDrafts=[],feeUnit='lakh';
+ const feeKinds=['Service Fee','Fire Insurance','Lawyer Fee','Stamp / ကျမ်းကျိန်ခ','Processing Fee','Other Fee'];
+ const feeWays={deduct:'Loan ထဲက ဖြတ်',separate:'ကိုယ့်ငွေနဲ့ သီးခြားပေး',record:'မှတ်တမ်းသာ (ငွေမနုတ်)'};
+ const newFeeDraft=()=>({id:uid(),label:'Service Fee',calc:'percent',value:'2',handling:'deduct',date:'',note:''});
+ function feeBreakdown(loan){
+   let deducted=0,separate=0,recordOnly=0;const entries=[];
+   for(const f of (loan.fees||[])){
+     const amount=f.calc==='percent'?Math.round(loan.principalMMK*f.value/100):f.value;
+     if(!Number.isSafeInteger(amount)||amount<0)throw Error('Invalid fee amount');
+     if(f.handling==='deduct')deducted+=amount;
+     else if(f.handling==='separate')separate+=amount;
+     else if(f.handling==='record')recordOnly+=amount;
+     else throw Error('Invalid fee handling');
+     entries.push({...f,amountMMK:amount});
+   }
+   if(deducted>=loan.principalMMK)throw Error('Loan ဖြတ်တောက်ခက Principal ထက်နည်းရပါမယ်');
+   return {entries,deducted,separate,recordOnly,total:deducted+separate+recordOnly,
+     netReceived:loan.principalMMK-deducted,afterSeparate:loan.principalMMK-deducted-separate};
+ }
+ function renderFeesEditor(){
+   const u=val('fUnit'),ut=unitText(u);
+   $('feeRows').innerHTML=feeDrafts.map((f,i)=>`<div class="feeItem" data-fee="${esc(f.id)}">
+     <div class="feeItemHeader"><span class="feeItemTitle">Fee #${i+1}</span><button type="button" class="btn red tiny" data-remove-fee="${esc(f.id)}">✕ ဖယ်ရန်</button></div>
+     <div class="feeGrid">
+       <div class="field full"><label>Fee အမျိုးအစား</label><input data-fee-field="label" maxlength="100" list="feeKinds" value="${esc(f.label)}" placeholder="Fee အမည်" required></div>
+       <div class="field"><label>တွက်နည်း</label><select data-fee-field="calc"><option value="percent" ${f.calc==='percent'?'selected':''}>%</option><option value="fixed" ${f.calc==='fixed'?'selected':''}>Fixed Amount</option></select></div>
+       <div class="field"><label>ပမာဏ (${f.calc==='percent'?'%':ut})</label><input data-fee-field="value" type="number" inputmode="decimal" min="0.000001" step="any" value="${esc(f.value)}" required></div>
+       <div class="field full"><label>ပေးချေ / ဖြတ်တောက်ပုံ</label><select data-fee-field="handling">${Object.entries(feeWays).map(([v,t])=>`<option value="${v}" ${f.handling===v?'selected':''}>${t}</option>`).join('')}</select></div>
+       <div class="field"><label>နေ့စွဲ (DD/MM/YYYY) · Optional</label><input data-fee-field="date" inputmode="numeric" maxlength="10" placeholder="DD/MM/YYYY" value="${esc(f.date)}"></div>
+       <div class="field"><label>Reference / မှတ်ချက်</label><input data-fee-field="note" maxlength="300" value="${esc(f.note)}" placeholder="Receipt / Note"></div>
+     </div></div>`).join('');
+   const datalist=$('feeKinds');if(!datalist){const dl=document.createElement('datalist');dl.id='feeKinds';dl.innerHTML=feeKinds.map(x=>`<option value="${esc(x)}"></option>`).join('');document.body.appendChild(dl)}
+ }
+ function collectFees(principalMMK,unit){
+   if(feeDrafts.length>30)throw Error('Fee 30 ခုအထိပဲ ထည့်နိုင်ပါတယ်');
+   const fees=feeDrafts.map(f=>{
+     const label=f.label.trim(),valueInput=Number(f.value);
+     if(!label||label.length>100)throw Error('Fee အမည် မှန်ကန်စွာ ထည့်ပါ');
+     if(!Number.isFinite(valueInput)||valueInput<=0)throw Error(label+': Fee ပမာဏ ထည့်ပါ');
+     let value;
+     if(f.calc==='percent'){if(valueInput>100)throw Error(label+': % သည် 100 ထက် မကျော်ရ');value=valueInput}
+     else if(f.calc==='fixed'){value=Math.round(valueInput*multiplier(unit));if(!Number.isSafeInteger(value)||value<1||value>1e14)throw Error(label+': Fixed Amount မမှန်ပါ')}
+     else throw Error(label+': Fee တွက်နည်း မမှန်ပါ');
+     const d=f.date.trim(),date=d?dateToISO(d):'';
+     if(d&&!date)throw Error(label+': Fee Date ကို DD/MM/YYYY ထည့်ပါ');
+     if(!feeWays[f.handling])throw Error(label+': ဖြတ်တောက်ပုံ မမှန်ပါ');
+     if(f.note.length>300)throw Error('Fee Note 300 လုံးအောက် ထည့်ပါ');
+     return {id:f.id,label,calc:f.calc,value,handling:f.handling,date,note:f.note.trim()};
+   });
+   feeBreakdown({principalMMK,fees});
+   return fees;
+ }
+ function previewFees(loan){
+   const s=feeBreakdown(loan),u=loan.unit,ut=unitText(u);
+   $('feeSummary').innerHTML=`<b>စာချုပ် Loan:</b> ${money(loan.principalMMK,u)} ${ut}<br>
+     <b>Loan ထဲကဖြတ်:</b> − ${money(s.deducted,u)} ${ut}<br>
+     <b>Net Received:</b> ${money(s.netReceived,u)} ${ut}<br>
+     <b>သီးခြားပေး:</b> ${money(s.separate,u)} ${ut}<br>
+     <b>သီးခြားပေးပြီး အသားတင်:</b> ${money(s.afterSeparate,u)} ${ut}
+     ${s.recordOnly?`<br><b>မှတ်တမ်းသာ:</b> ${money(s.recordOnly,u)} ${ut}`:''}`;
+ }
+
  function schedule(a){
   const rows=[];let bal=Math.round(a.principalMMK),n=a.months,r=a.annualRate/1200;
   if(n<1||n>MAX_MONTHS||!Number.isFinite(bal)||bal<=0||!Number.isFinite(r)||r<0)throw Error('Invalid loan schedule');
@@ -295,8 +420,9 @@ button,input,select,textarea{font:inherit}button{cursor:pointer;-webkit-tap-high
   const today=isoToday();$('fName').value=target?.name||'';$('fLender').value=target?.lender||'';$('fUnit').value=target?.unit||(fromCalculator?val('cUnit'):'lakh');
   setDate('fStart',target?.startDate||today);setDate('fFirst',target?.firstDue||plusMonths(today,1));
   $('fAmount').value=target?exactInput(target.principalMMK,target.unit):'';
-  $('fYears').value=target?Math.floor(target.months/12):3;$('fMonths').value=target?target.months%12:0;$('fRatePeriod').value=target?.ratePeriod||'annual';$('fRate').value=target?(target.ratePeriod==='monthly'?(target.monthlyRate??target.annualRate/12):target.annualRate):15;$('fMethod').value=target?.method||'emi';$('fNote').value=target?.note||''; $('fBranch').value=target?.branch||(profile?.branch==='ALL'?(branches.find(b=>b.id==='FAMILY')?.id||branches[0]?.id||''):(profile?.branch||'FAMILY'));
+  $('fYears').value=target?Math.floor(target.months/12):3;$('fMonths').value=target?target.months%12:0;$('fRatePeriod').value=target?.ratePeriod||'annual';$('fRate').value=target?(target.ratePeriod==='monthly'?(target.monthlyRate??target.annualRate/12):target.annualRate):15;$('fMethod').value=target?.method||'emi';$('fNote').value=target?.note||'';$('fLoanType').value=target?.loanType||''; $('fBranch').value=target?.branch||(profile?.branch==='ALL'?(branches.find(b=>b.id==='FAMILY')?.id||branches[0]?.id||''):(profile?.branch||'FAMILY'));
   if(fromCalculator){const c=calcData();if(c){$('fName').value='New Loan';$('fAmount').value=exactInput(c.loanMMK,val('cUnit'));$('fYears').value=num('cYears');$('fMonths').value=num('cMonths');$('fRate').value=num('cRate');$('fRatePeriod').value='annual'}}
+  feeUnit=val('fUnit');feeDrafts=(target?.fees||[]).map(f=>({...f,value:String(f.calc==='fixed'?f.value/multiplier(feeUnit):f.value),date:f.date?dateToDMY(f.date):''}));renderFeesEditor();
   updatePreview();openDialog('loanDialog');
  }
  function getLoanForm(){
@@ -306,9 +432,9 @@ button,input,select,textarea{font:inherit}button{cursor:pointer;-webkit-tap-high
   if(!Number.isFinite(principalMMK)||principalMMK<1||principalMMK>1e14)throw Error('Loan ပမာဏ မှန်ကန်စွာ ထည့်ပါ');
   if(!Number.isFinite(rate)||rate<0||rate>1000||!Number.isFinite(annualRate)||annualRate>12000)throw Error('အတိုးနှုန်း 0% မှ 1000% အတွင်း ထည့်ပါ');
   if(!validISO(startDate)||!validISO(firstDue)||firstDue<=startDate)throw Error('ပထမ Due Date သည် ယူတဲ့နေ့ထက် နောက်ကျရပါမယ်');
-  return {name:val('fName').trim(),lender:val('fLender').trim(),principalMMK,unit:val('fUnit'),startDate,firstDue,months:years*12+months,annualRate,ratePeriod,monthlyRate:ratePeriod==='monthly'?rate:null,method:val('fMethod'),note:val('fNote').trim()};
+  return {name:val('fName').trim(),lender:val('fLender').trim(),loanType:val('fLoanType').trim(),fees:collectFees(principalMMK,val('fUnit')),principalMMK,unit:val('fUnit'),startDate,firstDue,months:years*12+months,annualRate,ratePeriod,monthlyRate:ratePeriod==='monthly'?rate:null,method:val('fMethod'),note:val('fNote').trim()};
  }
- function updatePreview(){try{const a=getLoanForm(),s=schedule(a);$('loanPreview').innerHTML=`<b>လစဉ်ပထမသွင်းငွေ:</b> ${money(s[0].payment,a.unit)} ${unitText(a.unit)}<br><b>စုစုပေါင်းသွင်းရန်:</b> ${money(s.reduce((x,r)=>x+r.payment,0),a.unit)} ${unitText(a.unit)}<br><b>အရစ်ကျ:</b> ${a.months} လ · <b>နောက်ဆုံး Due:</b> ${longDate(s.at(-1).date)}`;}catch(e){$('loanPreview').textContent=`Input အချက်အလက်ဖြည့်ပါ။ ${e.message}`}}
+ function updatePreview(){try{const a=getLoanForm(),s=schedule(a);previewFees(a);$('loanPreview').innerHTML=`<b>လစဉ်ပထမသွင်းငွေ:</b> ${money(s[0].payment,a.unit)} ${unitText(a.unit)}<br><b>စုစုပေါင်းသွင်းရန်:</b> ${money(s.reduce((x,r)=>x+r.payment,0),a.unit)} ${unitText(a.unit)}<br><b>အရစ်ကျ:</b> ${a.months} လ · <b>နောက်ဆုံး Due:</b> ${longDate(s.at(-1).date)}`;}catch(e){$('loanPreview').textContent=`Input အချက်အလက်ဖြည့်ပါ။ ${e.message}`}}
  async function saveLoan(e){e.preventDefault();let data;try{
     guard(editingId?'EDIT_LOAN':'CREATE_LOAN');data=getLoanForm();schedule(data);
     if(profile.branch==='ALL')data.branch=val('fBranch');else data.branch=profile.branch;
@@ -333,9 +459,19 @@ button,input,select,textarea{font:inherit}button{cursor:pointer;-webkit-tap-high
  }
  function renderDetails(){const l=activeLoan();if(!l){switchTab('home');return}const i=aggregate(l),u=l.unit,ut=unitText(u),progress=Math.round(i.paidInstallments/l.months*100);
   const recent=[...l.payments].sort((a,b)=>b.date.localeCompare(a.date)||b.createdAt.localeCompare(a.createdAt));
-  actionVisibility('editLoanBtn',can('EDIT_LOAN')); $('detailContent').innerHTML=`<div class="detailHero" style="margin-top:13px"><div class="eyebrow">LOAN DETAIL</div><h2>${esc(l.name)}</h2><p>${esc(l.lender||'')} · ${rateText(l)} · ${l.method==='flat'?'Flat Rate':l.method==='equal'?'Reducing Equal Principal':'Reducing EMI'}</p><div class="detailPairs"><div><small>ကျန်သွင်းငွေ</small><b>${money(i.left,u)} <em>${ut}</em></b></div><div><small>ကျန်အရစ်ကျ</small><b>${i.remainCount} <em>/ ${l.months} ကြိမ်</em></b></div></div><div class="progress" style="background:#ffffff35;margin-top:18px"><i style="width:${progress}%;background:#6aebcd"></i></div><div style="display:flex;justify-content:space-between;color:#cfe5e5;font-size:11px"><span>${i.paidInstallments} ကြိမ်သွင်းပြီး</span><span>${progress}%</span></div></div>
+  actionVisibility('editLoanBtn',can('EDIT_LOAN')); $('detailContent').innerHTML=`<div class="detailHero" style="margin-top:13px"><div class="eyebrow">LOAN DETAIL</div><h2>${esc(l.name)}</h2><p>${esc(l.lender||'')}${l.loanType?' · '+esc(l.loanType):''} · ${rateText(l)} · ${l.method==='flat'?'Flat Rate':l.method==='equal'?'Reducing Equal Principal':'Reducing EMI'}</p><div class="detailPairs"><div><small>ကျန်သွင်းငွေ</small><b>${money(i.left,u)} <em>${ut}</em></b></div><div><small>ကျန်အရစ်ကျ</small><b>${i.remainCount} <em>/ ${l.months} ကြိမ်</em></b></div></div><div class="progress" style="background:#ffffff35;margin-top:18px"><i style="width:${progress}%;background:#6aebcd"></i></div><div style="display:flex;justify-content:space-between;color:#cfe5e5;font-size:11px"><span>${i.paidInstallments} ကြိမ်သွင်းပြီး</span><span>${progress}%</span></div></div>
   <div class="panel"><div class="sectionTitle"><h2>ငွေသွင်းရန်</h2><span class="tag ${i.status==='late'?'late':''}">${i.status==='closed'?'ပြီးဆုံး':i.status==='late'?'Due ကျော်':'ဆပ်နေဆဲ'}</span></div><div class="keyrows"><div class="keyrow"><span>နောက်ကျ / ပေးရန်ရောက်သောငွေ</span><b class="num" style="color:${i.dueAmount>0?'#c44146':'#008c85'}">${money(i.dueAmount,u)} ${ut}</b></div><div class="keyrow"><span>နောက်လွတ်မည့် / မပြီးသေးသည့် Due</span><b>${i.next?longDate(i.next.date):'ပြီးပါပြီ'}</b></div><div class="keyrow"><span>ထိုအရစ်ကျ လက်ကျန်</span><b class="num">${i.next?money(i.next.outstanding,u)+' '+ut:'0 '+ut}</b></div><div class="keyrow"><span>Due ရောက်၍ မပြီးသေးသည့်အရစ်ကျ</span><b>${i.dueUnpaidCount} ကြိမ်</b></div></div><div style="margin-top:16px">${can('ADD_PAYMENT')&&i.left>=1?'<button class="btn primary block" id="addPayment">＋ ငွေသွင်းမှတ်တမ်း ထည့်မယ်</button>':''}</div></div>
   <div class="panel"><div class="sectionTitle"><h2>ချေးငွေအကျဉ်းချုပ်</h2></div><div class="keyrows"><div class="keyrow"><span>ချေးယူငွေ (အရင်း)</span><b class="num">${money(l.principalMMK,u)} ${ut}</b></div><div class="keyrow"><span>ယူတဲ့နေ့</span><b>${longDate(l.startDate)}</b></div><div class="keyrow"><span>ပထမ Due Date</span><b>${longDate(l.firstDue)}</b></div><div class="keyrow"><span>နောက်ဆုံး သွင်းရမည့်နေ့</span><b>${longDate(i.rows.at(-1).date)}</b></div><div class="keyrow"><span>Loan ကာလ</span><b>${Math.floor(l.months/12)} နှစ် ${l.months%12} လ (${l.months} ကြိမ်)</b></div><div class="keyrow"><span>အတိုးစုစုပေါင်း (စာချုပ်အစီအစဉ်)</span><b class="num">${money(i.interest,u)} ${ut}</b></div><div class="keyrow"><span>စုစုပေါင်း Settlement (စီစဉ်ထား)</span><b class="num">${money(i.total,u)} ${ut}</b></div><div class="keyrow"><span>တကယ်သွင်းပြီး စုစုပေါင်း</span><b class="num">${money(i.paid,u)} ${ut}</b></div><div class="keyrow"><span>မူလ Payment Plan အရ ကျန်ငွေ</span><b class="num">${money(i.left,u)} ${ut}</b></div></div>${l.note?`<p class="compactNote">📝 ${esc(l.note)}</p>`:''}<p class="compactNote">* ဒီမှာ ပြထားသော Settlement = အတိုးနှင့် မူလ Schedule အရ အရစ်ကျအားလုံး၏ စုစုပေါင်း ဖြစ်ပါတယ်။ အချိန်စောပြီးအပြီးဆပ်လိုပါက Bank မှ အမှန်တကယ် Settlement Quote ရယူရန် လိုအပ်ပါတယ်။</p></div>
+  <div class="panel"><div class="sectionTitle"><div><h2>Loan Charges &amp; Net Received</h2><p>မူလအရင်း/အတိုး/EMI နဲ့ သီးခြားတွက်ထားပါတယ်</p></div></div>
+     ${(()=>{const f=feeBreakdown(l);return `<div class="keyrows">
+       <div class="keyrow"><span>စာချုပ်ပါ Loan Principal</span><b class="num">${money(l.principalMMK,u)} ${ut}</b></div>
+       <div class="keyrow"><span>Loan ထဲမှ ဖြတ်တောက်ခ</span><b class="num">− ${money(f.deducted,u)} ${ut}</b></div>
+       <div class="keyrow"><span>Net Received (အကောင့်ထဲရငွေ)</span><b class="num">${money(f.netReceived,u)} ${ut}</b></div>
+       <div class="keyrow"><span>ကိုယ့်ငွေနဲ့ သီးခြားပေးထား</span><b class="num">− ${money(f.separate,u)} ${ut}</b></div>
+       <div class="keyrow"><span>Fees နုတ်ပြီး အသားတင်ငွေ</span><b class="num">${money(f.afterSeparate,u)} ${ut}</b></div>
+       ${f.recordOnly?`<div class="keyrow"><span>မှတ်တမ်းသာ (မနုတ်)</span><b>${money(f.recordOnly,u)} ${ut}</b></div>`:''}
+       </div>${f.entries.length?`<div class="subhead">Fee Records (${f.entries.length})</div>${f.entries.map(x=>`<div class="keyrow" style="display:block;margin-top:8px"><div style="display:flex;justify-content:space-between;gap:10px"><b>${esc(x.label)}</b><b>${money(x.amountMMK,u)} ${ut}</b></div><div class="feeMini">${x.calc==='percent'?esc(String(x.value))+'% of Principal · ':''}${esc(feeWays[x.handling])}${x.date?' · '+longDate(x.date):''}${x.note?' · '+esc(x.note):''}</div></div>`).join('')}`:'<p class="muted">Fee မှတ်တမ်းမရှိသေးပါ။</p>'}`})()}
+     <p class="compactNote">Loan Principal မပြောင်းပါ။ ပြန်ဆပ်ရမည့်ငွေကို စာချုပ်အတိုင်း သီးခြားတွက်ထားပါတယ်။</p></div>
   <div class="panel"><div class="sectionTitle"><div><h2>Payment History</h2><p>သွင်းခဲ့သည့်နေ့နှင့် ငွေပမာဏ</p></div><span class="tag">${l.payments.length} Records</span></div><div class="paymentsList">${recent.length?recent.map(p=>`<div class="payCard"><div><strong>${money(p.amountMMK,u)} <span style="font:600 10px 'Myanmar Text',sans-serif">${ut}</span></strong><small>${longDate(p.date)} ${p.note?' · '+esc(p.note):''}</small></div>${can('DELETE_PAYMENT')?`<button class="btn red tiny" data-delete-pay="${esc(p.id)}" aria-label="Void payment">ဖျက်</button>`:''}</div>`).join(''):'<div class="muted">ငွေသွင်းမှတ်တမ်း မရှိသေးပါ။</div>'}</div></div>
   <div class="panel"><div class="sectionTitle"><div><h2>Monthly Due Schedule</h2><p>အစီအစဉ်နှင့် သွင်းပြီးအရေအတွက် (ပထမဆုံး Due မှစ)</p></div></div><div class="tableScroll"><table class="dataTable"><thead><tr><th>#</th><th>Due Date</th><th>သွင်းရန် (${ut})</th><th>အရင်း</th><th>အတိုး</th><th>ပေးပြီး</th><th>လက်ကျန်</th><th>Status</th></tr></thead><tbody>${i.rows.map(r=>{const status=r.outstanding<1?'<span class="pill good">Paid</span>':r.date<=isoToday()?'<span class="pill bad">Due</span>':r.applied>0?'<span class="pill">Partial</span>':'<span class="pill">Upcoming</span>';return `<tr><td>${r.index}</td><td>${longDate(r.date)}</td><td class="num">${money(r.payment,u)}</td><td class="num">${money(r.principal,u)}</td><td class="num">${money(r.interest,u)}</td><td class="num positive">${money(r.applied,u)}</td><td class="num ${r.date<=isoToday()&&r.outstanding>0?'negative':''}">${money(r.outstanding,u)}</td><td>${status}</td></tr>`}).join('')}</tbody></table></div><p class="compactNote">သွင်းငွေကို Due အစဉ်အတိုင်း (အဟောင်းဆုံးမှ) ဖြည့်တွက်ထားပါတယ်။ အပိုငွေသွင်းသော်လည်း မူလအတိုး/EMI ဇယားကို အလိုအလျောက် Refinance မတွက်ပါ။</p></div><div style="margin-top:14px" class="noPrint">${can('DELETE_LOAN')?'<button id="deleteLoan" class="btn red block">ဒီ Loan ကို ဖျက်ရန်</button>':''}</div>`;
  }
@@ -357,7 +493,28 @@ button,input,select,textarea{font:inherit}button{cursor:pointer;-webkit-tap-high
  function csvEscape(s){return '"'+String(s??'').replace(/"/g,'""')+'"'}
  function exportJson(){if(!canExport())return notifyError(Error('OWNER permission required to export'));download(`loan-keeper-backup-${isoToday()}.json`,JSON.stringify({app:'loan-keeper',version:1,exportedAt:new Date().toISOString(),loans},null,2),'application/json;charset=utf-8');toast('JSON Backup ဒေါင်းပြီးပါပြီ')}
  function exportCsv(){if(!canExport())return notifyError(Error('OWNER permission required to export'));let r=[['Loan','Lender','Method','Annual Rate (%)','Payment Date','Payment (MMK)','Note']];for(let l of loans)for(let p of l.payments)r.push([l.name,l.lender,l.method,l.annualRate,p.date,p.amountMMK,p.note]);download(`loan-payments-${isoToday()}.csv`,'\ufeff'+r.map(a=>a.map(csvEscape).join(',')).join('\r\n'),'text/csv;charset=utf-8');toast('CSV ဒေါင်းပြီးပါပြီ')}
- function validImportedLoan(l){if(!l||typeof l!=='object'||typeof l.id!=='string'||typeof l.name!=='string'||!Array.isArray(l.payments)||l.name.length>100||l.payments.length>10000||!validISO(l.startDate)||!validISO(l.firstDue)||l.firstDue<=l.startDate||!Number.isInteger(l.months)||l.months<1||l.months>360||!['flat','emi','equal'].includes(l.method)||!['lakh','mmk'].includes(l.unit)||!Number.isInteger(l.principalMMK)||l.principalMMK<1||l.principalMMK>1e14||typeof l.annualRate!=='number'||l.annualRate<0||l.annualRate>12000||!['monthly','annual',undefined].includes(l.ratePeriod))return false;
+ function validFeeData(l){
+   if(l.loanType!==undefined&&(typeof l.loanType!=='string'||l.loanType.length>60))return false;
+   if(l.fees===undefined)return true;
+   if(!Array.isArray(l.fees)||l.fees.length>30)return false;
+   const ids=new Set();let deducted=0;
+   for(const f of l.fees){
+     if(!f||typeof f!=='object'||typeof f.id!=='string'||!f.id||ids.has(f.id)||
+        typeof f.label!=='string'||!f.label.trim()||f.label.length>100||
+        !['percent','fixed'].includes(f.calc)||!['deduct','separate','record'].includes(f.handling)||
+        typeof f.value!=='number'||!Number.isFinite(f.value)||f.value<=0||
+        (f.calc==='percent'&&f.value>100)||
+        (f.calc==='fixed'&&(!Number.isSafeInteger(f.value)||f.value>1e14))||
+        (f.date!==undefined&&f.date!==''&&!validISO(f.date))||
+        typeof(f.note||'')!=='string'||String(f.note||'').length>300)return false;
+     ids.add(f.id);
+     const amount=f.calc==='percent'?Math.round(l.principalMMK*f.value/100):f.value;
+     if(!Number.isSafeInteger(amount)||amount<=0)return false;
+     if(f.handling==='deduct')deducted+=amount;
+   }
+   return Number.isSafeInteger(deducted)&&deducted<l.principalMMK;
+ }
+ function validImportedLoan(l){if(!l||typeof l!=='object'||typeof l.id!=='string'||typeof l.name!=='string'||!Array.isArray(l.payments)||l.name.length>100||l.payments.length>10000||!validISO(l.startDate)||!validISO(l.firstDue)||l.firstDue<=l.startDate||!Number.isInteger(l.months)||l.months<1||l.months>360||!['flat','emi','equal'].includes(l.method)||!['lakh','mmk'].includes(l.unit)||!Number.isInteger(l.principalMMK)||l.principalMMK<1||l.principalMMK>1e14||typeof l.annualRate!=='number'||l.annualRate<0||l.annualRate>12000||!['monthly','annual',undefined].includes(l.ratePeriod)||!validFeeData(l))return false;
   let total;try{total=schedule(l).reduce((s,r)=>s+r.payment,0)}catch{return false}let sum=0;for(let p of l.payments){if(!p||typeof p.id!=='string'||!validISO(p.date)||p.date<l.startDate||!Number.isInteger(p.amountMMK)||p.amountMMK<=0)return false;sum+=p.amountMMK}return sum<=total+1}
  async function restore(){
    try{guard('IMPORT');const file=$('importFile').files?.[0];if(!file)throw Error('JSON Backup ဖိုင်ရွေးပါ');
@@ -375,10 +532,29 @@ button,input,select,textarea{font:inherit}button{cursor:pointer;-webkit-tap-high
  $('loanList').addEventListener('click',e=>{if(e.target.closest('#emptyAdd'))return openLoanForm();const b=e.target.closest('[data-open-loan]');if(b){activeLoanId=b.dataset.openLoan;switchTab('details')}});
  $('detailContent').addEventListener('click',e=>{if(e.target.closest('#addPayment'))return openPay();const b=e.target.closest('[data-delete-pay]');if(b)removePay(b.dataset.deletePay);if(e.target.closest('#deleteLoan')){const l=activeLoan();if(!l)return;if(!confirm(`“${l.name}” နှင့် သူ့ရဲ့ Payment Records အားလုံးကို ဖျက်မလား? ဒီလုပ်ဆောင်မှု ပြန်မရပါ။`))return;if(!can('DELETE_LOAN'))return notifyError(Error('Permission denied'));void bridgeRequest('DELETE_LOAN',{loanId:l.id}).then(async()=>{activeLoanId=null;await refreshCloud();switchTab('home');toast('✓ Loan soft-delete ပြီးပါပြီ')}).catch(notifyError)}});
  $('saveFromCalc').onclick=()=>openLoanForm(null,true);['cPrice','cUnit','cDown','cRate','cYears','cMonths'].forEach(id=>$(id).addEventListener('input',renderCalc));
- ['fName','fAmount','fUnit','fStart','fFirst','fYears','fMonths','fRate','fRatePeriod','fMethod'].forEach(id=>$(id).addEventListener('input',updatePreview));
+ // Fee editor: never mutate existing saved records until Loan Save is confirmed.
+ $('addFeeBtn').onclick=()=>{if(feeDrafts.length>=30)return notifyError(Error('Fee 30 ခုအထိပဲ ထည့်ပါ'));feeDrafts.push(newFeeDraft());renderFeesEditor();updatePreview()};
+ $('feeRows').addEventListener('click',e=>{const btn=e.target.closest('[data-remove-fee]');if(!btn)return;feeDrafts=feeDrafts.filter(f=>f.id!==btn.dataset.removeFee);renderFeesEditor();updatePreview()});
+ function feeChanged(e){
+   const el=e.target.closest('[data-fee-field]');if(!el)return;
+   const row=el.closest('[data-fee]'),f=feeDrafts.find(f=>f.id===row?.dataset.fee);if(!f)return;
+   const key=el.dataset.feeField;
+   if(key==='calc'&&el.value!==f.calc){f.calc=el.value;f.value='';renderFeesEditor();return updatePreview()}
+   f[key]=el.value;
+   if(key==='date'&&e.type==='input'){
+     const digits=el.value.replace(/\D/g,'').slice(0,8);
+     f.date=el.value=digits.length>4?`${digits.slice(0,2)}/${digits.slice(2,4)}/${digits.slice(4)}`:digits.length>2?`${digits.slice(0,2)}/${digits.slice(2)}`:digits;
+   }
+   updatePreview();
+ }
+ $('feeRows').addEventListener('input',feeChanged);$('feeRows').addEventListener('change',feeChanged);
+ $('fUnit').addEventListener('change',()=>{
+   const next=val('fUnit');feeDrafts=feeDrafts.map(f=>({...f,value:f.calc==='fixed'&&f.value?String(Math.round(Number(f.value)*multiplier(feeUnit))/multiplier(next)):f.value}));feeUnit=next;renderFeesEditor();updatePreview();
+ });
+ ['fName','fAmount','fStart','fFirst','fYears','fMonths','fRate','fRatePeriod','fMethod'].forEach(id=>$(id).addEventListener('input',updatePreview));
  $('fStart').addEventListener('change',()=>{if(!editingId){setDate('fFirst',plusMonths(val('fStart'),1));updatePreview()}});
  $('exportJSON').onclick=exportJson;$('exportCSV').onclick=exportCsv;$('restoreBtn').onclick=restore;
- $('reloadCloud').onclick=()=>void refreshCloud().catch(notifyError);
+ $('reloadCloud').onclick=()=>void refreshCloud().catch(err=>{if(/session|token|login|inactive/i.test(String(err.message||''))){clearSavedSession();profile=null;loans=[];$('signinPanel').style.display='block';$('signedPanel').style.display='none';permissionUI();renderHome();status('Session expired · Login required')}else notifyError(err)});
  $('showPermissions').onclick=()=>{if(!profile)return;alert(`Google Mail: ${profile.email}\nRole: ${profile.role}\nBranch: ${profile.branch}\nLevel: ${profile.level}\nAllowed: ${profile.permissions.join(', ')}`)};
  $('logOutBtn').onclick=logout;
  ['fStart','fFirst','pDate'].forEach(bindDateInput);permissionUI();
