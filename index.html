@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#102a44">
 <meta name="description" content="Loan Keeper — Private Google Login, role and branch controlled loan tracker">
-<meta name="app-ui-version" content="3.0-permissions-dmy">
+<meta name="app-ui-version" content="3.1-owner-export-dmy">
 <title>Loan Keeper | Family Secure</title>
 <style>
 :root{--bg:#f4f7fb;--ink:#14273c;--sub:#63758a;--navy:#102a44;--teal:#008c85;--tealbg:#e9faf6;--blue:#286cf1;--line:#e3eaf2;--white:#fff;--red:#c44146;--redbg:#fff1f1;--gold:#9d6519;--goldbg:#fff7e7;--shadow:0 9px 30px #152c4710}
@@ -54,7 +54,7 @@ button,input,select,textarea{font:inherit}button{cursor:pointer;-webkit-tap-high
 
   <div class="hero"><div class="eyebrow">PRIVATE FAMILY LOAN KEEPER</div><h1>ချေးငွေအားလုံး တစ်နေရာတည်း</h1><p>ချေးထားတဲ့ငွေ၊ သွင်းပြီးငွေ၊ လစဉ် Due Date နဲ့ ကျန်အရစ်ကျတွေကို စီမံကြည့်ရှုပါ။</p><div class="topMetrics"><div class="metric"><small>Loan စုစုပေါင်း</small><strong id="hCount">0 <span>ခု</span></strong></div><div class="metric"><small>ကျန်သွင်းငွေစုစုပေါင်း</small><strong id="hRemain">0 <span>သိန်း</span></strong></div></div></div>
   <div class="topMetrics"><div class="metric dark"><small>သွင်းပြီး စုစုပေါင်း</small><strong id="hPaid">0 <span>သိန်း</span></strong></div><div class="metric dark"><small>Due ကျော်နေသော ငွေ</small><strong id="hOverdue">0 <span>သိန်း</span></strong></div></div>
-  <div class="section"><div class="sectionTitle"><div><h2>My Loans</h2><p>Loan တစ်ခုချင်းစီ၏ လက်ရှိအခြေအနေ</p></div><button class="btn primary tiny" id="addLoanBtn">＋ Loan ထည့်</button></div><div class="loanList" id="loanList"></div></div>
+  <div class="section"><div class="sectionTitle"><div><h2>My Loans</h2><p>Loan တစ်ခုချင်းစီ၏ လက်ရှိအခြေအနေ</p></div><button class="btn primary tiny permissionHidden" id="addLoanBtn">＋ Loan ထည့်</button></div><div class="loanList" id="loanList"></div></div>
   <div class="warnbox"><b>Data သိမ်းဆည်းမှု</b> — Private Google Sheet မှာ Data သိမ်းပြီးမှ Save Success ပြပါမယ်။ Google Login မလုပ်ရသေးရင် Calculator ပဲ အသုံးပြုနိုင်ပါတယ်။</div>
  </section>
  <section class="page" id="page-calculator">
@@ -71,7 +71,8 @@ button,input,select,textarea{font:inherit}button{cursor:pointer;-webkit-tap-high
  </section>
  <section class="page" id="page-backup"><div class="sectionTitle"><div><h2>Backup &amp; Access</h2><p>Cloud Private Google Sheet / Export</p></div></div>
  <div class="panel"><div class="notice" id="cloudStatus">🔐 Google Login လုပ်ပြီးမှ Cloud Data ကို ဖတ်/ရေးနိုင်ပါတယ်။</div>
-  <div class="subhead">Data Export</div><div class="btnRow"><button class="btn blue" id="exportJSON">⬇ JSON Backup</button><button class="btn" id="exportCSV">⬇ Payments CSV</button></div>
+  <div id="exportSection" class="permissionHidden"><div class="subhead">Data Export · OWNER ONLY</div><div class="btnRow"><button class="btn blue" id="exportJSON">⬇ JSON Backup</button><button class="btn" id="exportCSV">⬇ Payments CSV</button></div></div>
+  <p class="compactNote" id="noExportInfo">JSON / CSV Export ကို OWNER / FULL Account သီးသန့် အသုံးပြုနိုင်ပါတယ်။</p>
   <div id="importSection" class="permissionHidden"><hr class="thinDivider"><div class="subhead">Owner Only — Import Previous Backup</div>
   <p class="muted">ယခင် HTML ရဲ့ JSON Backup မှ Loan တွေကို Cloud မှာ အသစ်ထည့်ပါမယ်။ ရှိပြီးသား Loan ကို မအစားထိုးပါ။ တစ်ကြိမ်လျှင် Loan ၂၀ ခုအထိ။</p>
   <div class="field"><label for="importFile">Loan Keeper JSON Backup</label><input id="importFile" type="file" accept="application/json,.json" style="padding:9px;font-size:12px;height:50px"></div>
@@ -115,14 +116,17 @@ button,input,select,textarea{font:inherit}button{cursor:pointer;-webkit-tap-high
  const bridgeChannel=Array.from(crypto.getRandomValues(new Uint8Array(16)),x=>x.toString(16).padStart(2,'0')).join('');
  const pending=new Map();
  const can=permission=>!!profile&&profile.permissions.includes(permission);
+ const canExport=()=>!!profile&&profile.role==='OWNER'&&profile.level==='FULL'&&can('VIEW');
  function actionVisibility(id,allowed){const el=$(id);if(!el)return;el.classList.toggle('permissionHidden',!allowed);el.disabled=!allowed}
  function permissionUI(){
    actionVisibility('addLoanBtn',can('CREATE_LOAN'));
    actionVisibility('saveFromCalc',can('CREATE_LOAN'));
    actionVisibility('restoreBtn',can('IMPORT'));
    $('importSection').classList.toggle('permissionHidden',!can('IMPORT'));
-   actionVisibility('exportJSON',can('VIEW'));
-   actionVisibility('exportCSV',can('VIEW'));
+   actionVisibility('exportJSON',canExport());
+   actionVisibility('exportCSV',canExport());
+   $('exportSection').classList.toggle('permissionHidden',!canExport());
+   $('noExportInfo').classList.toggle('permissionHidden',canExport());
  }
  function guard(permission){if(!can(permission))throw Error('No '+permission+' permission. Google Login / Role စစ်ပါ။')}
  function notifyError(error){alert('Cloud Save မအောင်မြင်ပါ: '+String(error?.message||error));}
@@ -351,8 +355,8 @@ button,input,select,textarea{font:inherit}button{cursor:pointer;-webkit-tap-high
  }
  function download(name,text,mime){const blob=new Blob([text],{type:mime}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=name;document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),2000)}
  function csvEscape(s){return '"'+String(s??'').replace(/"/g,'""')+'"'}
- function exportJson(){download(`loan-keeper-backup-${isoToday()}.json`,JSON.stringify({app:'loan-keeper',version:1,exportedAt:new Date().toISOString(),loans},null,2),'application/json;charset=utf-8');toast('JSON Backup ဒေါင်းပြီးပါပြီ')}
- function exportCsv(){let r=[['Loan','Lender','Method','Annual Rate (%)','Payment Date','Payment (MMK)','Note']];for(let l of loans)for(let p of l.payments)r.push([l.name,l.lender,l.method,l.annualRate,p.date,p.amountMMK,p.note]);download(`loan-payments-${isoToday()}.csv`,'\ufeff'+r.map(a=>a.map(csvEscape).join(',')).join('\r\n'),'text/csv;charset=utf-8');toast('CSV ဒေါင်းပြီးပါပြီ')}
+ function exportJson(){if(!canExport())return notifyError(Error('OWNER permission required to export'));download(`loan-keeper-backup-${isoToday()}.json`,JSON.stringify({app:'loan-keeper',version:1,exportedAt:new Date().toISOString(),loans},null,2),'application/json;charset=utf-8');toast('JSON Backup ဒေါင်းပြီးပါပြီ')}
+ function exportCsv(){if(!canExport())return notifyError(Error('OWNER permission required to export'));let r=[['Loan','Lender','Method','Annual Rate (%)','Payment Date','Payment (MMK)','Note']];for(let l of loans)for(let p of l.payments)r.push([l.name,l.lender,l.method,l.annualRate,p.date,p.amountMMK,p.note]);download(`loan-payments-${isoToday()}.csv`,'\ufeff'+r.map(a=>a.map(csvEscape).join(',')).join('\r\n'),'text/csv;charset=utf-8');toast('CSV ဒေါင်းပြီးပါပြီ')}
  function validImportedLoan(l){if(!l||typeof l!=='object'||typeof l.id!=='string'||typeof l.name!=='string'||!Array.isArray(l.payments)||l.name.length>100||l.payments.length>10000||!validISO(l.startDate)||!validISO(l.firstDue)||l.firstDue<=l.startDate||!Number.isInteger(l.months)||l.months<1||l.months>360||!['flat','emi','equal'].includes(l.method)||!['lakh','mmk'].includes(l.unit)||!Number.isInteger(l.principalMMK)||l.principalMMK<1||l.principalMMK>1e14||typeof l.annualRate!=='number'||l.annualRate<0||l.annualRate>12000||!['monthly','annual',undefined].includes(l.ratePeriod))return false;
   let total;try{total=schedule(l).reduce((s,r)=>s+r.payment,0)}catch{return false}let sum=0;for(let p of l.payments){if(!p||typeof p.id!=='string'||!validISO(p.date)||p.date<l.startDate||!Number.isInteger(p.amountMMK)||p.amountMMK<=0)return false;sum+=p.amountMMK}return sum<=total+1}
  async function restore(){
