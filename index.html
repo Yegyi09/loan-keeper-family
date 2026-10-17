@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#102a44">
 <meta name="description" content="Loan Keeper — Private Google Login, role and branch controlled loan tracker">
-<meta name="app-ui-version" content="4.3-compact-ui-name-only">
+<meta name="app-ui-version" content="4.4-compact-ui-calendar-fix">
 <title>Loan Keeper | Family Secure</title>
 <style>
 :root{--bg:#f4f7fb;--ink:#14273c;--sub:#63758a;--navy:#102a44;--teal:#008c85;--tealbg:#e9faf6;--blue:#286cf1;--line:#e3eaf2;--white:#fff;--red:#c44146;--redbg:#fff1f1;--gold:#9d6519;--goldbg:#fff7e7;--shadow:0 9px 30px #152c4710}
@@ -228,6 +228,28 @@ button,input,select,textarea{font:inherit}button{cursor:pointer;-webkit-tap-high
  .compactHero .metric{border-color:#ddd;color:#000}
  .header,#signinPanel,#signedPanel{display:none!important}
 }
+
+/* V4.4: the native date control must be clickable, not 1px / behind the page.
+   Its full-size picker indicator covers the calendar icon; the DD/MM/YYYY text
+   remains the only displayed text. Native popover remains browser controlled. */
+.dateField{position:relative}
+.field .dateField input.nativeDatePicker{
+  position:absolute;right:0;top:0;bottom:auto;left:auto;
+  display:block;width:41px;height:41px;min-width:41px;
+  padding:0;margin:0;border:0;opacity:.012;
+  pointer-events:auto;z-index:5;cursor:pointer;
+  background:transparent;color:transparent;
+}
+.field .dateField input.nativeDatePicker::-webkit-calendar-picker-indicator{
+  position:absolute;inset:0;width:100%;height:100%;margin:0;padding:0;
+  opacity:0;cursor:pointer;background:transparent;
+}
+.feeDateField .dateText{flex:1;min-width:0;width:1%}
+.feeDateField .datePickBtn{flex:0 0 38px;height:38px}
+@media(max-width:720px){
+  .field .dateField input.nativeDatePicker{width:41px;height:41px;min-width:41px}
+  .feeDateField .datePickBtn{flex-basis:41px;height:41px}
+}
 </style>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 </head>
@@ -306,7 +328,7 @@ button,input,select,textarea{font:inherit}button{cursor:pointer;-webkit-tap-high
  <div class="field full feesBlock"><div class="sectionTitle"><div><h2 style="font-size:14px">Loan Charges &amp; Fees</h2><p>Service / မီးအာမခံ / ရှေ့နေခ · Loan ထဲမှ ဖြတ် သို့မဟုတ် သီးခြားပေး</p></div><button type="button" class="btn soft tiny" id="addFeeBtn">＋ Fee ထည့်</button></div>
  <div class="feeMini">Fees က အတိုးတွက်မည့် မူလ Principal / EMI ကို မပြောင်းပါ။ ရာခိုင်နှုန်း Fee က စာချုပ် Principal အပေါ်တွက်ပါတယ်။</div><div id="feeRows"></div><div id="feeSummary" class="notice" style="margin-top:8px">Fee မရှိသေးပါ။</div></div>
  <div class="field full"><label for="fNote">မှတ်ချက် (Optional)</label><textarea id="fNote" maxlength="700" placeholder="စာချုပ်နံပါတ်၊ အသေးစိတ်"></textarea></div></div>
- <p class="compactNote" style="margin:5px 0">Date format: DD/MM/YYYY (ဥပမာ 17/10/2026) · 📅 Calendar ဖြင့်လည်း ရွေးနိုင်ပါတယ်။</p>
+ <p class="compactNote" style="margin:5px 0">Date format: DD/MM/YYYY (ဥပမာ 17/10/2026) · 📅 Calendar Icon ကိုနှိပ်ပြီး ရွေးနိုင်ပါတယ်။</p>
  <div class="notice" id="loanPreview" style="margin:13px 0"></div><div class="btnRow"><button type="button" class="btn" data-close="loanDialog">မလုပ်တော့</button><button class="btn primary" type="submit">✓ Loan သိမ်းမယ်</button></div></form></div></div>
 <div class="dialogBackdrop" id="payDialog" role="dialog" aria-modal="true" aria-labelledby="payTitle"><div class="dialog"><div class="dialogTop"><h2 id="payTitle">ငွေသွင်းမှတ်တမ်း</h2><button class="dialogClose" data-close="payDialog" aria-label="Close">×</button></div><form id="payForm"><div class="fieldGrid"><div class="field"><label for="pDate">ငွေသွင်းတဲ့နေ့ *</label><div class="dateField"><input id="pDate" class="dateText" type="text" inputmode="numeric" placeholder="DD/MM/YYYY" pattern="[0-9]{2}/[0-9]{2}/[0-9]{4}" maxlength="10" autocomplete="off" spellcheck="false" title="DD/MM/YYYY" required><button type="button" id="pDateCalendar" class="datePickBtn" aria-label="Calendar ရွေးရန်" title="Calendar ရွေးရန်">📅</button><input id="pDatePicker" class="nativeDatePicker" type="date" tabindex="-1" aria-label="Calendar date"></div></div><div class="field"><label for="pAmount">သွင်းငွေ *</label><input id="pAmount" type="number" inputmode="decimal" min="0.00001" step="any" required></div><div class="field full"><label for="pNote">မှတ်ချက် (Optional)</label><textarea id="pNote" placeholder="Bank transfer, Cash, Receipt No." maxlength="500"></textarea></div></div><p class="compactNote">Date format: DD/MM/YYYY</p><p class="compactNote" id="payHint"></p><div class="btnRow" style="margin-top:14px"><button type="button" data-close="payDialog" class="btn">မလုပ်တော့</button><button type="submit" class="btn primary">✓ သွင်းငွေသိမ်းမယ်</button></div></form></div></div>
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
@@ -530,7 +552,7 @@ button,input,select,textarea{font:inherit}button{cursor:pointer;-webkit-tap-high
        <div class="field"><label>တွက်နည်း</label><select data-fee-field="calc"><option value="percent" ${f.calc==='percent'?'selected':''}>%</option><option value="fixed" ${f.calc==='fixed'?'selected':''}>Fixed Amount</option></select></div>
        <div class="field"><label>ပမာဏ (${f.calc==='percent'?'%':ut})</label><input data-fee-field="value" type="number" inputmode="decimal" min="0.000001" step="any" value="${esc(f.value)}" required></div>
        <div class="field full"><label>ပေးချေ / ဖြတ်တောက်ပုံ</label><select data-fee-field="handling">${Object.entries(feeWays).map(([v,t])=>`<option value="${v}" ${f.handling===v?'selected':''}>${t}</option>`).join('')}</select></div>
-       <div class="field"><label>နေ့စွဲ (DD/MM/YYYY) · Optional</label><input data-fee-field="date" inputmode="numeric" maxlength="10" placeholder="DD/MM/YYYY" value="${esc(f.date)}"></div>
+       <div class="field"><label>နေ့စွဲ (DD/MM/YYYY) · Optional</label><div class="dateField feeDateField"><input data-fee-field="date" class="dateText" type="text" inputmode="numeric" maxlength="10" placeholder="DD/MM/YYYY" autocomplete="off" value="${esc(f.date)}"><button type="button" class="datePickBtn" data-fee-calendar aria-label="Fee date Calendar ရွေးရန်" title="Calendar ရွေးရန်">📅</button><input type="date" class="nativeDatePicker" data-fee-date-picker aria-label="Fee date calendar" value="${dateToISO(f.date)}"></div></div>
        <div class="field"><label>Reference / မှတ်ချက်</label><input data-fee-field="note" maxlength="300" value="${esc(f.note)}" placeholder="Receipt / Note"></div>
      </div></div>`).join('');
    const datalist=$('feeKinds');if(!datalist){const dl=document.createElement('datalist');dl.id='feeKinds';dl.innerHTML=feeKinds.map(x=>`<option value="${esc(x)}"></option>`).join('');document.body.appendChild(dl)}
@@ -730,6 +752,23 @@ button,input,select,textarea{font:inherit}button{cursor:pointer;-webkit-tap-high
  // Fee editor: never mutate existing saved records until Loan Save is confirmed.
  $('addFeeBtn').onclick=()=>{if(feeDrafts.length>=30)return notifyError(Error('Fee 30 ခုအထိပဲ ထည့်ပါ'));feeDrafts.push(newFeeDraft());renderFeesEditor();updatePreview()};
  $('feeRows').addEventListener('click',e=>{const btn=e.target.closest('[data-remove-fee]');if(!btn)return;feeDrafts=feeDrafts.filter(f=>f.id!==btn.dataset.removeFee);renderFeesEditor();updatePreview()});
+ // Fee Date calendar: native date picker opens directly by tapping the overlay.
+ // Button event remains for keyboard / accessibility-driven activation.
+ $('feeRows').addEventListener('click',e=>{
+   const btn=e.target.closest('[data-fee-calendar]');if(!btn)return;
+   const picker=btn.closest('.feeDateField')?.querySelector('[data-fee-date-picker]');
+   if(!picker)return;
+   try{if(typeof picker.showPicker==='function')picker.showPicker();else picker.focus()}
+   catch{picker.focus()}
+ });
+ $('feeRows').addEventListener('change',e=>{
+   const picker=e.target.closest('[data-fee-date-picker]');if(!picker)return;
+   const row=picker.closest('[data-fee]'),f=feeDrafts.find(f=>f.id===row?.dataset.fee);
+   if(!f)return;
+   f.date=dateToDMY(picker.value);
+   const input=row.querySelector('[data-fee-field="date"]');if(input)input.value=f.date;
+   updatePreview();
+ });
  function feeChanged(e){
    const el=e.target.closest('[data-fee-field]');if(!el)return;
    const row=el.closest('[data-fee]'),f=feeDrafts.find(f=>f.id===row?.dataset.fee);if(!f)return;
@@ -739,6 +778,8 @@ button,input,select,textarea{font:inherit}button{cursor:pointer;-webkit-tap-high
    if(key==='date'&&e.type==='input'){
      const digits=el.value.replace(/\D/g,'').slice(0,8);
      f.date=el.value=digits.length>4?`${digits.slice(0,2)}/${digits.slice(2,4)}/${digits.slice(4)}`:digits.length>2?`${digits.slice(0,2)}/${digits.slice(2)}`:digits;
+     const nativePicker=row.querySelector('[data-fee-date-picker]');
+     if(nativePicker)nativePicker.value=dateToISO(f.date)||'';
    }
    updatePreview();
  }
